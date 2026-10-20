@@ -39,7 +39,7 @@ pharma-trace/
 
 | Milestone | Status |
 |---|---|
-| Review 1: analysis, ER/EER, DDL, constraints | In progress |
-| Review 1: DML, functions, presentation | Pending |
+| Review 1: analysis, ER/EER, DDL, constraints | completed |
+| Review 1: DML, functions, presentation | completed |
 | Review 2: subqueries, joins, views, procedures, functions, cursors, triggers | Pending |
 | Project report | Pending |
