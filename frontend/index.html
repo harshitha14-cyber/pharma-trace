@@ -4,87 +4,155 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pharma-Trace Explorer</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
 <style>
-:root{--bg:#f4fafb;--card:#fff;--ink:#102a43;--mut:#526b7a;--line:#d5e4ea;--teal:#00a6a6;--ok:#1a9e6b;--bad:#d64545;--warn:#d98e00}
-@media (prefers-color-scheme:dark){:root{--bg:#0e1b24;--card:#162833;--ink:#e6f0f4;--mut:#9db3bf;--line:#2a4150;--teal:#2cc7c7;--ok:#2ea878;--bad:#e55b5b;--warn:#e0a020}}
+:root{--bg:#f3f6fb;--card:#fff;--ink:#0f1f3d;--mut:#586a85;--line:#dbe4f0;--teal:#0d9488;--acc:#6366f1;--ok:#16a34a;--bad:#e11d48;--warn:#d97706}
+@media (prefers-color-scheme:dark){:root{--bg:#0a1020;--card:#121a2f;--ink:#e8eefb;--mut:#9fb0cc;--line:#24304d;--teal:#2dd4bf;--acc:#818cf8;--ok:#1fae78;--bad:#f0506e;--warn:#fbbf24}}
 *{box-sizing:border-box}
-body{margin:0;font:16px/1.5 system-ui,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
-header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid var(--line)}
-h1{font-size:22px;margin:0}
-main{max-width:1100px;margin:0 auto;padding:20px 24px}
-.mut{color:var(--mut);font-size:14px}
+body{margin:0;font:17px/1.55 system-ui,"Segoe UI",sans-serif;color:var(--ink);background-color:var(--bg);
+  background-image:radial-gradient(900px 500px at 8% -10%,rgba(20,184,166,.20),transparent),radial-gradient(800px 500px at 100% 0,rgba(99,102,241,.20),transparent);background-attachment:fixed}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid var(--line);background:linear-gradient(90deg,rgba(20,184,166,.10),rgba(99,102,241,.10))}
+h1{font-size:24px;margin:0;background:linear-gradient(90deg,var(--teal),var(--acc));-webkit-background-clip:text;background-clip:text;color:transparent}
+main{max-width:1150px;margin:0 auto;padding:18px 24px}
+.mut{color:var(--mut);font-size:15px}
 .bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
-.badge{padding:3px 12px;border-radius:99px;font-size:13px;border:1px solid var(--line);background:var(--card)}
+.badge{padding:3px 12px;border-radius:99px;font-size:14px;border:1px solid var(--line);background:var(--card)}
 button,select,input{font:inherit;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
 button{cursor:pointer}
-button.on{background:var(--teal);color:#fff;border-color:var(--teal)}
+button.on,button.go{background:var(--teal);color:#fff;border-color:var(--teal)}
+.intro{background:var(--card);border:1px solid var(--line);border-left:6px solid var(--teal);border-radius:8px;padding:12px 16px;margin:0 0 14px}
+#alertbar{display:none;background:var(--bad);color:#fff;font-weight:600;padding:12px 24px}
 .chain{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch}
-.node{flex:1 1 180px;max-width:230px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:4px}
+.node{flex:1 1 220px;max-width:280px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:6px}
 .node.badn{border:2px solid var(--bad)}
-.arrow{align-self:center;color:var(--mut);font-size:22px}
+.arrow{align-self:center;color:var(--mut);font-size:24px}
+.party small{display:block;color:var(--mut);font-size:14px;line-height:1.3}
+.role{font-size:12px;padding:2px 9px;border-radius:99px;background:var(--teal);color:#fff;display:inline-block}
 code{font-size:12px;color:var(--mut);word-break:break-all}
-.chip{font-size:12px;padding:2px 8px;border-radius:99px;color:#fff;display:inline-block}
+.chip{font-size:13px;padding:2px 9px;border-radius:99px;color:#fff;display:inline-block;margin:2px 4px 0 0}
 .chip.ok{background:var(--ok)}.chip.bad{background:var(--bad)}
 .banner{padding:12px 16px;border-radius:10px;font-weight:600;margin-bottom:14px;color:#fff}
 .banner.ok{background:var(--ok)}.banner.bad{background:var(--bad)}
 .alert{background:var(--card);border:1px solid var(--line);border-left:6px solid var(--bad);border-radius:8px;padding:10px 14px;margin-bottom:8px}
 .alert.warn{border-left-color:var(--warn)}
+.forms{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.form{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.form h3{margin:0;font-size:18px}
+.form label{font-size:14px;color:var(--mut)}
+#msg{margin-top:12px;padding:10px 14px;border-radius:8px;display:none;color:#fff}
+#msg.ok{background:var(--ok)}#msg.bad{background:var(--bad)}
+table{width:100%;border-collapse:collapse;background:var(--card);font-size:14px}
+th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line)}
+details{margin-top:22px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 16px}
+summary{cursor:pointer;font-weight:600}
+dt{font-weight:600;margin-top:8px}dd{margin:0;color:var(--mut)}
 </style>
 </head>
 <body>
 <header>
-  <div><h1>Pharma-Trace Explorer</h1><div class="mut">Follow a medicine batch and check that its history was never rewritten</div></div>
-  <div class="bar" style="margin:0"><span id="mode" class="badge">Loading</span>
-    <input id="api" value="http://localhost:8000" size="22" aria-label="API address"><button id="conn">Connect</button></div>
+  <div><h1>Pharma-Trace Explorer</h1><div class="mut">Follow a medicine from the factory to the patient, and check that nobody rewrote its history</div></div>
+  <div class="bar" style="margin:0"><span id="mode" class="badge">Loading</span><span id="auth" class="bar" style="margin:0"></span></div>
 </header>
+<div id="alertbar"></div>
 <main>
-  <nav class="bar">
-    <button data-t="journey" class="on">Batch journey</button>
-    <button data-t="verify">Verify chain</button>
-    <button data-t="alerts">Alerts</button>
+  <div id="who" class="mut" style="margin-bottom:10px"></div>
+  <nav class="bar" id="nav">
+    <button data-t="journey" class="on">Where did it go?</button>
+    <button data-t="verify">Is the history honest?</button>
+    <button data-t="alerts">Problems found</button>
+    <button data-t="add" id="navAdd">Add data</button>
+    <button data-t="audit" id="navAudit">Change log</button>
   </nav>
-  <div id="pick" class="bar"><label>Batch <select id="sel"></select></label><span id="st" class="badge"></span></div>
+  <div id="intro" class="intro"></div>
+  <div id="pick" class="bar"><label>Choose a batch <select id="sel"></select></label><span id="st" class="badge"></span></div>
   <div id="tools" class="bar" style="display:none">
-    <button id="t1">Change a quantity</button>
-    <button id="t2">Change it and re-hash (clever attacker)</button>
-    <button id="t0">Reset</button>
-    <span class="mut">Tip: batches 1, 2 and 3 have two hand-overs, so a re-hashed change shows a broken link.</span>
+    <button id="t1">Pretend someone edits a record</button>
+    <button id="t2">Pretend a clever cheat edits it and rewrites the seal</button>
+    <button id="t0">Undo</button>
+    <span class="mut">Tip: batches 1, 2 and 3 have two steps, so the clever cheat is caught at step 2.</span>
   </div>
   <div id="view"></div>
+  <div id="msg"></div>
+  <details>
+    <summary>New to this? Plain-English glossary</summary>
+    <dl>
+      <dt>Batch</dt><dd>One production lot of a medicine, like one tray of identical tablets from the same factory run.</dd>
+      <dt>Hand-over</dt><dd>One record saying a batch moved from one company to another.</dd>
+      <dt>Seal (digital fingerprint, called a hash)</dt><dd>A short code worked out from a record. Change even one digit of the record and the seal changes completely.</dd>
+      <dt>Chain</dt><dd>Each record also contains the seal of the step before it, so secretly editing an old record breaks every later link.</dd>
+      <dt>Saved records</dt><dd>Once a hand-over, reading or dispensing record is saved, nobody (not even the administrator) can edit or delete it. Any attempt is blocked, logged and shown to everyone.</dd>
+      <dt>Cold chain</dt><dd>Keeping medicines such as insulin and vaccines within a safe temperature range from factory to patient.</dd>
+    </dl>
+  </details>
 </main>
 <script>
-const ZERO = '0'.repeat(64);
-const P = {1:'Sun Pharma Industries Ltd',2:'Cipla Healthcare',3:'Apex Pharma Distributors',4:'MedLine Wholesale Traders',
-           5:'Vellore Care Pharmacy',6:'Anna Nagar Medicals',7:'City General Hospital',10:'Green Cross Pharmacy'};
-const B0 = [{id:1,no:'DOLO-2026-A',drug:'Dolo 500',status:'ACTIVE'},{id:2,no:'MOX-2026-B',drug:'Mox 250',status:'ACTIVE'},
-            {id:3,no:'LAN-2026-C',drug:'Lantus',status:'ACTIVE'},{id:4,no:'CET-2025-D',drug:'Cetzine',status:'EXPIRED'},
-            {id:5,no:'AZI-2026-E',drug:'Azithral 500',status:'ACTIVE'},{id:6,no:'RAB-2026-F',drug:'Rabipur',status:'ACTIVE'},
-            {id:7,no:'DOLO-2026-G',drug:'Dolo 500',status:'RECALLED'},{id:8,no:'MOX-2025-H',drug:'Mox 250',status:'QUARANTINED'}];
-// batch, shipment, seq, quantity, from party, to party
+// ---- Login settings come from frontend/config.js (copy config.example.js and fill it in).
+const CFG = {
+  SUPABASE_URL: typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : '',
+  SUPABASE_ANON_KEY: typeof SUPABASE_ANON_KEY !== 'undefined' ? SUPABASE_ANON_KEY : '',
+  API: 'http://localhost:8000'};
+
+const ZERO = '0'.repeat(64), SEE_ALL = ['ADMIN', 'REGULATOR', 'AUDITOR'];
+const ROLE = {MANUFACTURER:['Manufacturer','makes the medicine'], DISTRIBUTOR:['Distributor','delivers medicines to shops'],
+  WHOLESALER:['Wholesaler','sells medicines in bulk to shops'], PHARMACY:['Pharmacy','sells medicines to patients'],
+  HOSPITAL:['Hospital','treats patients and gives them medicine']};
+const STATUS = {ACTIVE:['Active','safe to sell'], EXPIRED:['Expired','must not be sold'],
+  RECALLED:['Recalled','pulled back by the regulator'], QUARANTINED:['Quarantined','on hold for checks']};
+const ALERT = {COLD_CHAIN:['Kept too warm or too cold','Medicines like insulin must stay cold; a bad reading can spoil them.'],
+  EXPIRED:['Past its expiry date','This batch should no longer be sold.'],
+  RECALLED:['Recalled by the regulator','This batch was pulled back and must not move.'],
+  DUPLICATE_SERIAL:['Possible fake: repeated serial number','Every pack should have its own number.'],
+  BROKEN_CHAIN:['Missing or altered history','The records for this batch do not add up.'],
+  UNAUTHORIZED_SELLER:['Seller without a valid license','A company without permission was involved.'],
+  IMPOSSIBLE_ROUTE:['Impossible delivery route','The delivery was too fast to be real.'],
+  TAMPER_ATTEMPT:['Someone tried to change a saved record','Saved records can never be edited or deleted. The attempt was blocked and logged.']};
+const INTRO = {journey:'Every time a batch of medicine changes hands, the database writes one record. Pick a batch to see its trip, step by step.',
+  verify:'Each record carries a digital seal made from its details and the seal before it. If anyone secretly edits a record, the seals stop matching and we raise a red flag.',
+  alerts:'The system watches for trouble automatically: bad storage, expired or recalled stock, signs of fake medicine, and any attempt to change a saved record.',
+  add:'Only the administrator can enter data. Everything saved here is permanent: records can be added, never edited or deleted.',
+  audit:'A diary of every change made to the data, including blocked attempts to tamper with saved records.'};
+const ROLEINFO = {ADMIN:'Administrator: you can enter new records. Saved records can never be edited or deleted, not even by you.',
+  REGULATOR:'Regulator: you can see everything and watch for problems. You cannot change data.',
+  AUDITOR:'Auditor: you can see everything, including the change log. You cannot change data.',
+  MANUFACTURER:'Manufacturer: you only see batches that passed through your own company. You cannot change data.',
+  DISTRIBUTOR:'Distributor: you only see batches that passed through your own company. You cannot change data.',
+  PHARMACY:'Pharmacy: you only see batches that passed through your own company. You cannot change data.'};
+// ---- sample data for offline mode
+const P = {1:['Sun Pharma Industries Ltd','MANUFACTURER'],2:['Cipla Healthcare','MANUFACTURER'],3:['Apex Pharma Distributors','DISTRIBUTOR'],
+  4:['MedLine Wholesale Traders','WHOLESALER'],5:['Vellore Care Pharmacy','PHARMACY'],6:['Anna Nagar Medicals','PHARMACY'],
+  7:['City General Hospital','HOSPITAL'],10:['Green Cross Pharmacy','PHARMACY']};
+const B0 = [{id:1,no:'DOLO-2026-A',drug:'Dolo 500',status:'ACTIVE',mfr:1},{id:2,no:'MOX-2026-B',drug:'Mox 250',status:'ACTIVE',mfr:1},
+  {id:3,no:'LAN-2026-C',drug:'Lantus (insulin)',status:'ACTIVE',mfr:2},{id:4,no:'CET-2025-D',drug:'Cetzine',status:'EXPIRED',mfr:2},
+  {id:5,no:'AZI-2026-E',drug:'Azithral 500',status:'ACTIVE',mfr:1},{id:6,no:'RAB-2026-F',drug:'Rabipur (vaccine)',status:'ACTIVE',mfr:2},
+  {id:7,no:'DOLO-2026-G',drug:'Dolo 500',status:'RECALLED',mfr:1},{id:8,no:'MOX-2025-H',drug:'Mox 250',status:'QUARANTINED',mfr:1}];
 const T = [[1,1,1,6000,1,3],[1,2,2,2000,3,5],[2,3,1,3000,1,4],[2,4,2,1000,4,6],[3,5,1,1500,2,3],[3,6,2,500,3,7],[5,7,1,2000,1,5],[6,8,1,800,2,10]];
-const A0 = [{type:'COLD_CHAIN',description:'Temperature 12.5 C exceeded the 8 C limit during shipment 5',status:'OPEN'},
-            {type:'EXPIRED',description:'Batch CET-2025-D passed its expiry date',status:'OPEN'},
-            {type:'RECALLED',description:'Regulator recall of batch DOLO-2026-G',status:'OPEN'},
-            {type:'DUPLICATE_SERIAL',description:'Serial SN-DOLO-G-0001 scanned at two locations',status:'OPEN'}];
-let B = B0, A = A0, demo = {}, live = false, API = '', cur = 1, tab = 'journey', rows = [];
+const A0 = [{type:'COLD_CHAIN',batch:3,description:'Temperature 12.5 C exceeded the 8 C limit during shipment 5',status:'OPEN'},
+  {type:'EXPIRED',batch:4,description:'Batch CET-2025-D passed its expiry date',status:'OPEN'},
+  {type:'RECALLED',batch:7,description:'Regulator recall of batch DOLO-2026-G',status:'OPEN'},
+  {type:'DUPLICATE_SERIAL',batch:7,description:'Serial SN-DOLO-G-0001 scanned at two locations',status:'OPEN'}];
+const DEMO_PARTY = {MANUFACTURER:1, DISTRIBUTOR:3, PHARMACY:5};
+
+let live = false, API = CFG.API, sb = null, me = {role:'ADMIN', email:'demo@preview', party:null};
+let demo = {}, A = [...A0], AUD = [], cur = 1, tab = 'journey', rows = [], B = [], lk = null;
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const n = x => Number(x).toLocaleString();
+const key = r => `${r.b}|${r.sh}|${r.seq}|${r.qty}|${r.prev}`;
+function say(text, ok) { const m = $('#msg'); m.textContent = text; m.className = ok ? 'ok' : 'bad'; m.style.display = 'block'; }
 
 async function sha(s) {
   if (!(window.crypto && crypto.subtle)) throw new Error('Hashing needs a secure page: open this file in a current browser or serve it from localhost.');
   const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
   return [...new Uint8Array(d)].map(x => x.toString(16).padStart(2, '0')).join('').toUpperCase();
 }
-const key = r => `${r.b}|${r.sh}|${r.seq}|${r.qty}|${r.prev}`;
-
 async function buildDemo() {
   const out = {};
   for (const [b, sh, seq, qty, f, t] of T) {
     const list = out[b] || (out[b] = []);
     const prev = list.length ? list[list.length - 1].hash : ZERO;
-    const r = {b, sh, seq, qty, from: P[f], to: P[t], prev};
-    r.hash = await sha(key(r));
-    list.push(r);
+    const r = {b, sh, seq, qty, from: P[f][0], fromType: P[f][1], to: P[t][0], toType: P[t][1], prev};
+    r.hash = await sha(key(r)); list.push(r);
   }
   return out;
 }
@@ -96,66 +164,170 @@ async function check(list) {
   }
   return res;
 }
-async function load() {
-  if (tab === 'alerts') return render();
-  rows = live ? await (await fetch(`${API}/api/batches/${cur}/journey`)).json() : await check(demo[cur] || []);
-  render();
+async function api(path, opt = {}) {
+  const h = {'Content-Type': 'application/json'};
+  if (sb) { const {data} = await sb.auth.getSession(); if (data.session) h.Authorization = 'Bearer ' + data.session.access_token; }
+  const r = await fetch(API + path, {...opt, headers: h});
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) { const e = new Error(j.detail || j.message || 'Error ' + r.status); e.status = r.status; e.body = j; throw e; }
+  return j;
 }
-function render() {
-  const v = tab === 'verify';
-  $('#pick').style.display = tab === 'alerts' ? 'none' : 'flex';
+const audit = (t, o, k, nv) => AUD.unshift({table_name:t, operation:o, record_key:k, new_value:nv, changed_by:me.email, changed_at:new Date().toLocaleString()});
+const sees = id => SEE_ALL.includes(me.role) || B0.find(b => b.id === id).mfr === me.party || T.some(t => t[0] === id && (t[4] === me.party || t[5] === me.party));
+
+// ---- data access (live database or offline sample)
+async function getBatches() { return live ? api('/api/batches') : B0.filter(b => sees(b.id)); }
+async function getAlerts() { return live ? api('/api/alerts') : A.filter(a => a.type === 'TAMPER_ATTEMPT' || sees(a.batch)); }
+async function getIntegrity() { return live ? api('/api/integrity') : {ok: true, problems: [], tamper_attempts: A.filter(a => a.type === 'TAMPER_ATTEMPT').length}; }
+async function getAudit() { return live ? api('/api/audit') : AUD; }
+async function getLookups() {
+  if (live) return api('/api/lookups');
+  return {parties: Object.entries(P).map(([id, v]) => ({id: +id, name: v[0], type: v[1]})), batches: B0.filter(b => b.status === 'ACTIVE'),
+    units: [{serial:'SN-DOLO-A-0002'},{serial:'SN-MOX-B-0002'},{serial:'SN-AZI-E-0002'}], patients: [{id:1,name:'Ravi Kumar'},{id:2,name:'Priya Sharma'}]};
+}
+
+// ---- rendering
+const party = (name, type) => { const r = ROLE[type];
+  return `<div class="party"><b>${esc(name)}</b>${r ? `<div><span class="role">${r[0]}</span></div><small>${r[1]}</small>` : ''}</div>`; };
+const opts = (list, val, txt) => list.map(x => `<option value="${esc(x[val])}">${esc(typeof txt === 'function' ? txt(x) : x[txt])}</option>`).join('');
+
+async function render() {
+  const v = tab === 'verify', role = me.role;
+  $('#nav').style.display = 'flex';
+  $('#navAdd').style.display = role === 'ADMIN' ? '' : 'none';
+  $('#navAudit').style.display = SEE_ALL.includes(role) ? '' : 'none';
+  $('#who').textContent = ROLEINFO[role] || '';
+  $('#intro').textContent = INTRO[tab];
+  $('#msg').style.display = 'none';
+  $('#pick').style.display = (tab === 'journey' || v) ? 'flex' : 'none';
   $('#tools').style.display = v && !live ? 'flex' : 'none';
-  const b = B.find(x => x.id === cur);
-  $('#st').textContent = b ? b.status : '';
+  const b = B.find(x => x.id === cur), s = b && STATUS[b.status];
+  $('#st').textContent = s ? `${s[0]}: ${s[1]}` : (b ? b.status : '');
   if (tab === 'alerts') {
-    $('#view').innerHTML = A.map(a => `<div class="alert ${a.type === 'COLD_CHAIN' || a.type === 'EXPIRED' ? 'warn' : ''}"><b>${esc(a.type)}</b> <span class="mut">${esc(a.status)}</span><div>${esc(a.description)}</div></div>`).join('') || '<p class="mut">No alerts.</p>';
+    const list = await getAlerts();
+    $('#view').innerHTML = list.map(a => { const t = ALERT[a.type] || [a.type, ''];
+      return `<div class="alert ${a.type === 'COLD_CHAIN' || a.type === 'EXPIRED' ? 'warn' : ''}"><b>${esc(t[0])}</b> <span class="mut">(${esc(a.status.toLowerCase())})</span><div>${esc(a.description)}</div><div class="mut">${esc(t[1])}</div></div>`; }).join('') || '<p class="mut">No problems found.</p>';
     return;
   }
-  if (!rows.length) { $('#view').innerHTML = '<p class="mut">This batch has not moved yet, so it has no custody records.</p>'; return; }
-  const bad = rows.find(r => !r.hashOk || !r.linkOk);
-  let h = v ? `<div class="banner ${bad ? 'bad' : 'ok'}">${bad ? 'TAMPERED at step ' + bad.seq : 'CHAIN VALID: every fingerprint matches and every link holds'}</div>` : '';
-  h += '<div class="chain"><div class="node"><b>Genesis</b><span class="mut">start of chain</span><code>64 zeros</code></div>';
+  if (tab === 'audit') {
+    const list = await getAudit();
+    $('#view').innerHTML = '<table><tr><th>When</th><th>Who</th><th>Table</th><th>Action</th><th>Record</th><th>Details</th></tr>' +
+      list.map(a => `<tr><td>${esc(a.changed_at || '')}</td><td>${esc(a.changed_by || '')}</td><td>${esc(a.table_name)}</td><td>${esc(a.operation)}</td><td>${esc(a.record_key || '')}</td><td>${esc((a.old_value ? a.old_value + ' → ' : '') + (a.new_value || ''))}</td></tr>`).join('') + '</table>';
+    return;
+  }
+  if (tab === 'add') return renderAdd();
+  if (!rows.length) { $('#view').innerHTML = '<p class="mut">This batch has not moved yet, so it has no hand-over records.</p>'; return; }
+  const bad = rows.find(r => !r.hashOk || !r.linkOk), last = rows[rows.length - 1];
+  let h = `<p><b>${esc(b ? b.drug : 'Batch')}</b> (batch ${esc(b ? b.no : cur)}) started at <b>${esc(rows[0].from)}</b> and has been handed over ${rows.length} time${rows.length > 1 ? 's' : ''}. The latest hand-over went to <b>${esc(last.to)}</b>.</p>`;
+  if (v) {
+    const msg = !bad ? 'HISTORY IS HONEST: every record matches its seal and every link holds'
+      : !bad.hashOk ? `TAMPERING DETECTED: step ${bad.seq} was changed after it was recorded`
+      : `TAMPERING DETECTED: step ${bad.seq} no longer fits the step before it, so an earlier record was changed`;
+    h += `<div class="banner ${bad ? 'bad' : 'ok'}">${msg}</div>`;
+  }
+  h += '<div class="chain"><div class="node"><b>Start of history</b><span class="mut">The first record has nothing before it, so it starts from a blank seal.</span><code>blank seal: 64 zeros</code></div>';
   for (const r of rows) {
     const flag = v && (!r.hashOk || !r.linkOk);
-    h += `<div class="arrow">→</div><div class="node ${flag ? 'badn' : ''}"><b>Step ${r.seq}</b><div>${esc(r.from)}</div><div class="mut">↓ ${r.qty} units</div><div>${esc(r.to)}</div>`
-       + `<code>prev ${esc(r.prev.slice(0, 8))}</code><code>hash ${esc(r.hash.slice(0, 8))}</code>`
-       + (v ? `<div><span class="chip ${r.hashOk ? 'ok' : 'bad'}">hash ${r.hashOk ? 'OK' : 'BAD'}</span> <span class="chip ${r.linkOk ? 'ok' : 'bad'}">link ${r.linkOk ? 'OK' : 'BROKEN'}</span></div>` : '')
-       + '</div>';
+    h += `<div class="arrow">→</div><div class="node ${flag ? 'badn' : ''}"><b>Step ${r.seq}</b>${party(r.from, r.fromType)}<div class="mut">↓ sent ${n(r.qty)} units</div>${party(r.to, r.toType)}`
+      + `<code>previous seal: ${esc(r.prev.slice(0, 8))}</code><code>this step’s seal: ${esc(r.hash.slice(0, 8))}</code>`
+      + (v ? `<div><span class="chip ${r.hashOk ? 'ok' : 'bad'}">${r.hashOk ? 'Record unchanged' : 'Record was edited'}</span><span class="chip ${r.linkOk ? 'ok' : 'bad'}">${r.linkOk ? 'Linked to previous step' : 'Link broken'}</span></div>` : '') + '</div>';
   }
   $('#view').innerHTML = h + '</div>';
 }
+async function renderAdd() {
+  lk = lk || await getLookups();
+  const pOpt = opts(lk.parties, 'id', x => `${x.name} (${(ROLE[x.type] || [x.type])[0]})`), bOpt = opts(lk.batches, 'id', x => `${x.no} · ${x.drug}`);
+  $('#view').innerHTML = `<div class="forms">
+  <form class="form" id="f1"><h3>Record a hand-over</h3><label>Batch</label><select name="batch_id">${bOpt}</select>
+    <label>From</label><select name="from_party">${pOpt}</select><label>To</label><select name="to_party">${pOpt}</select>
+    <label>Units</label><input name="qty" type="number" min="1" value="100"><button class="go">Save hand-over</button></form>
+  <form class="form" id="f2"><h3>Add a storage reading</h3><label>Batch</label><select name="batch_id">${bOpt}</select>
+    <label>Where</label><select name="party_id">${pOpt}</select><label>Temperature (°C)</label><input name="temperature_c" type="number" step="0.1" value="5">
+    <label>Humidity (%)</label><input name="humidity_pct" type="number" value="45"><button class="go">Save reading</button></form>
+  <form class="form" id="f3"><h3>Hand a pack to a patient</h3><label>Pack serial number</label><select name="serial">${opts(lk.units, 'serial', 'serial')}</select>
+    <label>Pharmacy or hospital</label><select name="pharmacy_id">${pOpt}</select><label>Patient</label><select name="patient_id">${opts(lk.patients, 'id', 'name')}</select>
+    <label>Prescription number (if required)</label><input name="rx" placeholder="RX-2026-0001"><button class="go">Save dispensing</button></form>
+  <div class="form"><h3>Security test</h3><div class="mut">Try to change a saved record. The database should refuse, write it in the change log and warn everyone.</div><button id="f4">Try to edit a saved record</button></div></div>`;
+  const send = (id, path, fix) => $(id).onsubmit = async e => { e.preventDefault();
+    const o = Object.fromEntries(new FormData(e.target)); fix(o);
+    try { if (live) await api(path, {method: 'POST', body: JSON.stringify(o)}); else demoSave(path, o); say('Saved. This record is now permanent.', true); poll(); }
+    catch (err) { say('Not saved: ' + err.message, false); } };
+  send('#f1', '/api/transfers', o => { ['batch_id','from_party','to_party','qty'].forEach(k => o[k] = +o[k]); });
+  send('#f2', '/api/readings', o => { o.batch_id = +o.batch_id; o.party_id = +o.party_id; o.temperature_c = +o.temperature_c; o.humidity_pct = +o.humidity_pct; });
+  send('#f3', '/api/dispense', o => { o.pharmacy_id = +o.pharmacy_id; o.patient_id = +o.patient_id; o.rx = o.rx || null; });
+  $('#f4').onclick = async () => { try {
+      if (live) await api('/api/demo/try-edit', {method: 'POST'});
+      else { A.unshift({type:'TAMPER_ATTEMPT', batch:1, description:`${me.email} tried to update a saved CUSTODY_TRANSFER record (id 1). The change was blocked.`, status:'OPEN'}); audit('CUSTODY_TRANSFER', 'UPDATE', '1', 'blocked'); }
+      say('The edit was blocked and logged.', true);
+    } catch (err) { say(err.body && err.body.blocked ? 'Blocked by the database: ' + err.body.message : 'Error: ' + err.message, !!(err.body && err.body.blocked)); }
+    poll(); };
+}
+function demoSave(path, o) {
+  if (path === '/api/transfers') {
+    if (o.from_party === o.to_party || o.qty <= 0) throw new Error('Sender and receiver must differ and units must be above zero');
+    const seq = T.filter(t => t[0] === o.batch_id).length + 1;
+    T.push([o.batch_id, T.length + 1, seq, o.qty, o.from_party, o.to_party]); audit('CUSTODY_TRANSFER', 'INSERT', String(T.length), `batch=${o.batch_id} seq=${seq} qty=${o.qty}`);
+    buildDemo().then(d => { demo = d; });
+  } else if (path === '/api/readings') {
+    audit('STORAGE_LOG', 'INSERT', '-', `temp=${o.temperature_c}`);
+    if ([3, 6].includes(o.batch_id) && (o.temperature_c < 2 || o.temperature_c > 8)) A.unshift({type:'COLD_CHAIN', batch:o.batch_id, description:`Temperature ${o.temperature_c} C outside 2 to 8 C`, status:'OPEN'});
+  } else audit('DISPENSING_RECORD', 'INSERT', '-', `serial=${o.serial}`);
+}
+
+// ---- actions
+async function load() {
+  if (tab === 'journey' || tab === 'verify') rows = live ? await api(`/api/batches/${cur}/journey`) : await check(demo[cur] || []);
+  await render();
+}
+async function fillBatches() {
+  B = await getBatches();
+  $('#sel').innerHTML = B.map(x => `<option value="${x.id}">${esc(x.no)} · ${esc(x.drug)}</option>`).join('');
+  cur = B.length ? B[0].id : 1; $('#sel').value = cur;
+}
 async function tamper(rehash) {
-  const base = demo[cur];
-  if (!base || !base.length) return;
-  const c = base.map(r => ({...r}));
-  c[0].qty += 1000;
+  const base = demo[cur]; if (!base || !base.length) return;
+  const c = base.map(r => ({...r})); c[0].qty += 1000;
   if (rehash) c[0].hash = await sha(key(c[0]));
-  rows = await check(c);
-  render();
+  rows = await check(c); render();
+}
+async function poll() {
+  try {
+    const g = await getIntegrity(), bar = $('#alertbar');
+    if (!g.ok) { bar.textContent = `SECURITY ALERT for everyone: saved records no longer match their seals (batch ${[...new Set(g.problems.map(p => p.batch_id))].join(', ')}).`; bar.style.display = 'block'; }
+    else if (g.tamper_attempts > 0) { bar.textContent = 'SECURITY ALERT for everyone: someone tried to change a saved record. The change was blocked and logged (see Problems found).'; bar.style.display = 'block'; }
+    else bar.style.display = 'none';
+    if (tab === 'alerts' || tab === 'audit') render();
+  } catch (e) { /* not signed in yet */ }
+}
+function authBox(session) {
+  const a = $('#auth');
+  if (!live) { a.innerHTML = `<label class="mut">Preview as <select id="as">${['ADMIN','REGULATOR','AUDITOR','MANUFACTURER','DISTRIBUTOR','PHARMACY'].map(r => `<option>${r}</option>`).join('')}</select></label>`;
+    $('#as').onchange = async e => { me = {role: e.target.value, email: 'demo@preview', party: DEMO_PARTY[e.target.value] || null}; tab = 'journey'; lk = null; setTab('journey'); await fillBatches(); await load(); poll(); }; return; }
+  if (session) { a.innerHTML = `<span class="badge">${esc(me.email)} · ${esc(me.role)}</span><button id="out">Sign out</button>`; $('#out').onclick = async () => { await sb.auth.signOut(); location.reload(); }; return; }
+  a.innerHTML = '<input id="em" type="email" placeholder="Email" size="18"><input id="pw" type="password" placeholder="Password" size="12"><button class="go" id="in">Sign in</button>';
+  $('#in').onclick = async () => { const {error} = await sb.auth.signInWithPassword({email: $('#em').value, password: $('#pw').value});
+    if (error) return say('Sign-in failed: ' + error.message, false); start(); };
+}
+function setTab(t) { tab = t; document.querySelectorAll('#nav button').forEach(x => x.classList.toggle('on', x.dataset.t === t)); }
+async function start() {
+  try { const {data} = sb ? await sb.auth.getSession() : {data: {}};
+    if (live && !data.session) { authBox(null); $('#nav').style.display = 'none'; $('#view').innerHTML = '<p class="mut">Please sign in to see the data.</p>'; $('#intro').textContent = 'Sign in with the account your administrator created for you.'; $('#pick').style.display = 'none'; return; }
+    if (live) { const m = await api('/api/me'); me = {email: m.email, role: m.role, party: m.party}; }
+    authBox(live ? data.session : null); await fillBatches(); await load(); poll();
+  } catch (e) { say(e.message, false); authBox(null); }
 }
 async function init() {
   try { demo = await buildDemo(); } catch (e) { $('#view').textContent = e.message; return; }
-  B = B0; A = A0; live = false; API = $('#api').value.replace(/\/$/, '');
-  try {
-    const c = new AbortController(), t = setTimeout(() => c.abort(), 1500);
-    const r = await fetch(API + '/api/batches', {signal: c.signal});
-    clearTimeout(t);
-    if (r.ok) { B = await r.json(); A = await (await fetch(API + '/api/alerts')).json(); live = true; }
-  } catch (e) { /* stay in demo mode */ }
-  $('#mode').textContent = live ? 'Live: Oracle database' : 'Demo data (offline)';
-  $('#sel').innerHTML = B.map(x => `<option value="${x.id}">${esc(x.no)} · ${esc(x.drug)}</option>`).join('');
-  cur = B.length ? B[0].id : 1;
-  await load();
+  try { const c = new AbortController(), t = setTimeout(() => c.abort(), 1500); const r = await fetch(API + '/api/health', {signal: c.signal}); clearTimeout(t); live = r.ok; } catch (e) { live = false; }
+  if (live && CFG.SUPABASE_URL && window.supabase) sb = supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
+  let notice = '';
+  if (live && !sb) { live = false; notice = 'The server is running but login is not set up. Create frontend/config.js with your SUPABASE_URL and SUPABASE_ANON_KEY (see config.example.js), check your internet connection, then refresh. Showing sample data.'; }
+  $('#mode').textContent = live ? 'Live data from the database' : 'Sample data (offline)';
+  await start(); if (notice) say(notice, false); setInterval(poll, 10000);
 }
-document.querySelectorAll('nav button').forEach(btn => btn.onclick = () => {
-  document.querySelectorAll('nav button').forEach(x => x.classList.remove('on'));
-  btn.classList.add('on'); tab = btn.dataset.t; load();
-});
+document.querySelectorAll('#nav button').forEach(btn => btn.onclick = () => { setTab(btn.dataset.t); load(); });
 $('#sel').onchange = e => { cur = +e.target.value; load(); };
-$('#t1').onclick = () => tamper(false);
-$('#t2').onclick = () => tamper(true);
-$('#t0').onclick = () => load();
-$('#conn').onclick = init;
+$('#t1').onclick = () => tamper(false); $('#t2').onclick = () => tamper(true); $('#t0').onclick = () => load();
 init();
 </script>
 </body>
