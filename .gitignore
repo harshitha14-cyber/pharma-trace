@@ -14,3 +14,4 @@ env/
 # OS / Misc
 Thumbs.db
 .DS_Store
+frontend/config.js
