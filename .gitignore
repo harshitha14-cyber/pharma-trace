@@ -1,0 +1,16 @@
+# Python / FastAPI
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+*.env
+
+# VS Code / IDE settings
+.vscode/
+.idea/
+
+# OS / Misc
+Thumbs.db
+.DS_Store

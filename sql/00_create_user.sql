@@ -19,3 +19,7 @@ GRANT CREATE SESSION, CREATE TABLE, CREATE VIEW, CREATE SEQUENCE,
 
 -- To start completely fresh later (deletes the user and everything it owns):
 -- DROP USER pharma_trace CASCADE;
+
+   SELECT USER FROM dual;
+   SELECT name, open_mode FROM v$pdbs;
+   SELECT name, pdb FROM v$services;
