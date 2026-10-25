@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pharma-Trace Explorer</title>
+<style>
+:root{--bg:#f4fafb;--card:#fff;--ink:#102a43;--mut:#526b7a;--line:#d5e4ea;--teal:#00a6a6;--ok:#1a9e6b;--bad:#d64545;--warn:#d98e00}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1b24;--card:#162833;--ink:#e6f0f4;--mut:#9db3bf;--line:#2a4150;--teal:#2cc7c7;--ok:#2ea878;--bad:#e55b5b;--warn:#e0a020}}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.5 system-ui,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid var(--line)}
+h1{font-size:22px;margin:0}
+main{max-width:1100px;margin:0 auto;padding:20px 24px}
+.mut{color:var(--mut);font-size:14px}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+.badge{padding:3px 12px;border-radius:99px;font-size:13px;border:1px solid var(--line);background:var(--card)}
+button,select,input{font:inherit;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+button{cursor:pointer}
+button.on{background:var(--teal);color:#fff;border-color:var(--teal)}
+.chain{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch}
+.node{flex:1 1 180px;max-width:230px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:4px}
+.node.badn{border:2px solid var(--bad)}
+.arrow{align-self:center;color:var(--mut);font-size:22px}
+code{font-size:12px;color:var(--mut);word-break:break-all}
+.chip{font-size:12px;padding:2px 8px;border-radius:99px;color:#fff;display:inline-block}
+.chip.ok{background:var(--ok)}.chip.bad{background:var(--bad)}
+.banner{padding:12px 16px;border-radius:10px;font-weight:600;margin-bottom:14px;color:#fff}
+.banner.ok{background:var(--ok)}.banner.bad{background:var(--bad)}
+.alert{background:var(--card);border:1px solid var(--line);border-left:6px solid var(--bad);border-radius:8px;padding:10px 14px;margin-bottom:8px}
+.alert.warn{border-left-color:var(--warn)}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>Pharma-Trace Explorer</h1><div class="mut">Follow a medicine batch and check that its history was never rewritten</div></div>
+  <div class="bar" style="margin:0"><span id="mode" class="badge">Loading</span>
+    <input id="api" value="http://localhost:8000" size="22" aria-label="API address"><button id="conn">Connect</button></div>
+</header>
+<main>
+  <nav class="bar">
+    <button data-t="journey" class="on">Batch journey</button>
+    <button data-t="verify">Verify chain</button>
+    <button data-t="alerts">Alerts</button>
+  </nav>
+  <div id="pick" class="bar"><label>Batch <select id="sel"></select></label><span id="st" class="badge"></span></div>
+  <div id="tools" class="bar" style="display:none">
+    <button id="t1">Change a quantity</button>
+    <button id="t2">Change it and re-hash (clever attacker)</button>
+    <button id="t0">Reset</button>
+    <span class="mut">Tip: batches 1, 2 and 3 have two hand-overs, so a re-hashed change shows a broken link.</span>
+  </div>
+  <div id="view"></div>
+</main>
+<script>
+const ZERO = '0'.repeat(64);
+const P = {1:'Sun Pharma Industries Ltd',2:'Cipla Healthcare',3:'Apex Pharma Distributors',4:'MedLine Wholesale Traders',
+           5:'Vellore Care Pharmacy',6:'Anna Nagar Medicals',7:'City General Hospital',10:'Green Cross Pharmacy'};
+const B0 = [{id:1,no:'DOLO-2026-A',drug:'Dolo 500',status:'ACTIVE'},{id:2,no:'MOX-2026-B',drug:'Mox 250',status:'ACTIVE'},
+            {id:3,no:'LAN-2026-C',drug:'Lantus',status:'ACTIVE'},{id:4,no:'CET-2025-D',drug:'Cetzine',status:'EXPIRED'},
+            {id:5,no:'AZI-2026-E',drug:'Azithral 500',status:'ACTIVE'},{id:6,no:'RAB-2026-F',drug:'Rabipur',status:'ACTIVE'},
+            {id:7,no:'DOLO-2026-G',drug:'Dolo 500',status:'RECALLED'},{id:8,no:'MOX-2025-H',drug:'Mox 250',status:'QUARANTINED'}];
+// batch, shipment, seq, quantity, from party, to party
+const T = [[1,1,1,6000,1,3],[1,2,2,2000,3,5],[2,3,1,3000,1,4],[2,4,2,1000,4,6],[3,5,1,1500,2,3],[3,6,2,500,3,7],[5,7,1,2000,1,5],[6,8,1,800,2,10]];
+const A0 = [{type:'COLD_CHAIN',description:'Temperature 12.5 C exceeded the 8 C limit during shipment 5',status:'OPEN'},
+            {type:'EXPIRED',description:'Batch CET-2025-D passed its expiry date',status:'OPEN'},
+            {type:'RECALLED',description:'Regulator recall of batch DOLO-2026-G',status:'OPEN'},
+            {type:'DUPLICATE_SERIAL',description:'Serial SN-DOLO-G-0001 scanned at two locations',status:'OPEN'}];
+let B = B0, A = A0, demo = {}, live = false, API = '', cur = 1, tab = 'journey', rows = [];
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+async function sha(s) {
+  if (!(window.crypto && crypto.subtle)) throw new Error('Hashing needs a secure page: open this file in a current browser or serve it from localhost.');
+  const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return [...new Uint8Array(d)].map(x => x.toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+const key = r => `${r.b}|${r.sh}|${r.seq}|${r.qty}|${r.prev}`;
+
+async function buildDemo() {
+  const out = {};
+  for (const [b, sh, seq, qty, f, t] of T) {
+    const list = out[b] || (out[b] = []);
+    const prev = list.length ? list[list.length - 1].hash : ZERO;
+    const r = {b, sh, seq, qty, from: P[f], to: P[t], prev};
+    r.hash = await sha(key(r));
+    list.push(r);
+  }
+  return out;
+}
+async function check(list) {
+  const res = [];
+  for (let i = 0; i < list.length; i++) {
+    const r = list[i];
+    res.push({...r, hashOk: (await sha(key(r))) === r.hash, linkOk: r.prev === (i ? list[i - 1].hash : ZERO)});
+  }
+  return res;
+}
+async function load() {
+  if (tab === 'alerts') return render();
+  rows = live ? await (await fetch(`${API}/api/batches/${cur}/journey`)).json() : await check(demo[cur] || []);
+  render();
+}
+function render() {
+  const v = tab === 'verify';
+  $('#pick').style.display = tab === 'alerts' ? 'none' : 'flex';
+  $('#tools').style.display = v && !live ? 'flex' : 'none';
+  const b = B.find(x => x.id === cur);
+  $('#st').textContent = b ? b.status : '';
+  if (tab === 'alerts') {
+    $('#view').innerHTML = A.map(a => `<div class="alert ${a.type === 'COLD_CHAIN' || a.type === 'EXPIRED' ? 'warn' : ''}"><b>${esc(a.type)}</b> <span class="mut">${esc(a.status)}</span><div>${esc(a.description)}</div></div>`).join('') || '<p class="mut">No alerts.</p>';
+    return;
+  }
+  if (!rows.length) { $('#view').innerHTML = '<p class="mut">This batch has not moved yet, so it has no custody records.</p>'; return; }
+  const bad = rows.find(r => !r.hashOk || !r.linkOk);
+  let h = v ? `<div class="banner ${bad ? 'bad' : 'ok'}">${bad ? 'TAMPERED at step ' + bad.seq : 'CHAIN VALID: every fingerprint matches and every link holds'}</div>` : '';
+  h += '<div class="chain"><div class="node"><b>Genesis</b><span class="mut">start of chain</span><code>64 zeros</code></div>';
+  for (const r of rows) {
+    const flag = v && (!r.hashOk || !r.linkOk);
+    h += `<div class="arrow">→</div><div class="node ${flag ? 'badn' : ''}"><b>Step ${r.seq}</b><div>${esc(r.from)}</div><div class="mut">↓ ${r.qty} units</div><div>${esc(r.to)}</div>`
+       + `<code>prev ${esc(r.prev.slice(0, 8))}</code><code>hash ${esc(r.hash.slice(0, 8))}</code>`
+       + (v ? `<div><span class="chip ${r.hashOk ? 'ok' : 'bad'}">hash ${r.hashOk ? 'OK' : 'BAD'}</span> <span class="chip ${r.linkOk ? 'ok' : 'bad'}">link ${r.linkOk ? 'OK' : 'BROKEN'}</span></div>` : '')
+       + '</div>';
+  }
+  $('#view').innerHTML = h + '</div>';
+}
+async function tamper(rehash) {
+  const base = demo[cur];
+  if (!base || !base.length) return;
+  const c = base.map(r => ({...r}));
+  c[0].qty += 1000;
+  if (rehash) c[0].hash = await sha(key(c[0]));
+  rows = await check(c);
+  render();
+}
+async function init() {
+  try { demo = await buildDemo(); } catch (e) { $('#view').textContent = e.message; return; }
+  B = B0; A = A0; live = false; API = $('#api').value.replace(/\/$/, '');
+  try {
+    const c = new AbortController(), t = setTimeout(() => c.abort(), 1500);
+    const r = await fetch(API + '/api/batches', {signal: c.signal});
+    clearTimeout(t);
+    if (r.ok) { B = await r.json(); A = await (await fetch(API + '/api/alerts')).json(); live = true; }
+  } catch (e) { /* stay in demo mode */ }
+  $('#mode').textContent = live ? 'Live: Oracle database' : 'Demo data (offline)';
+  $('#sel').innerHTML = B.map(x => `<option value="${x.id}">${esc(x.no)} · ${esc(x.drug)}</option>`).join('');
+  cur = B.length ? B[0].id : 1;
+  await load();
+}
+document.querySelectorAll('nav button').forEach(btn => btn.onclick = () => {
+  document.querySelectorAll('nav button').forEach(x => x.classList.remove('on'));
+  btn.classList.add('on'); tab = btn.dataset.t; load();
+});
+$('#sel').onchange = e => { cur = +e.target.value; load(); };
+$('#t1').onclick = () => tamper(false);
+$('#t2').onclick = () => tamper(true);
+$('#t0').onclick = () => load();
+$('#conn').onclick = init;
+init();
+</script>
+</body>
+</html>
