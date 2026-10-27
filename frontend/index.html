@@ -20,15 +20,15 @@ main{max-width:1150px;margin:0 auto;padding:18px 24px}
 .badge{padding:3px 12px;border-radius:99px;font-size:14px;border:1px solid var(--line);background:var(--card)}
 button,select,input{font:inherit;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
 button{cursor:pointer}
-button.on,button.go{background:var(--teal);color:#fff;border-color:var(--teal)}
+button.on,button.go{background:linear-gradient(135deg,#0d9488,#6366f1);color:#fff;border-color:transparent}
 .intro{background:var(--card);border:1px solid var(--line);border-left:6px solid var(--teal);border-radius:8px;padding:12px 16px;margin:0 0 14px}
 #alertbar{display:none;background:var(--bad);color:#fff;font-weight:600;padding:12px 24px}
 .chain{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch}
-.node{flex:1 1 220px;max-width:280px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:6px}
-.node.badn{border:2px solid var(--bad)}
-.arrow{align-self:center;color:var(--mut);font-size:24px}
+.node{flex:1 1 220px;max-width:280px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:6px;animation:rise .5s backwards;animation-delay:calc(var(--i,0)*90ms)}
+.node.badn{border:2px solid var(--bad);animation:rise .5s backwards,shake .6s .5s}
+.arrow{align-self:center;color:var(--teal);font-size:26px;animation:nudge 1.6s ease-in-out infinite;animation-delay:calc(var(--i,0)*150ms)}
 .party small{display:block;color:var(--mut);font-size:14px;line-height:1.3}
-.role{font-size:12px;padding:2px 9px;border-radius:99px;background:var(--teal);color:#fff;display:inline-block}
+.role{font-size:12px;padding:2px 9px;border-radius:99px;background:#4f46e5;color:#fff;display:inline-block}
 code{font-size:12px;color:var(--mut);word-break:break-all}
 .chip{font-size:13px;padding:2px 9px;border-radius:99px;color:#fff;display:inline-block;margin:2px 4px 0 0}
 .chip.ok{background:var(--ok)}.chip.bad{background:var(--bad)}
@@ -47,6 +47,30 @@ th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line)}
 details{margin-top:22px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 16px}
 summary{cursor:pointer;font-weight:600}
 dt{font-weight:600;margin-top:8px}dd{margin:0;color:var(--mut)}
+button{transition:transform .15s,box-shadow .15s}
+nav button:hover,button.go:hover{transform:translateY(-2px);box-shadow:0 8px 18px rgba(20,184,166,.3)}
+.tilt{transition:transform .18s ease,box-shadow .18s ease;transform-style:preserve-3d;will-change:transform}
+.tilt:hover{box-shadow:0 14px 34px rgba(20,184,166,.22)}
+.form{transition:transform .18s,box-shadow .18s}
+.form:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(99,102,241,.2)}
+.hero{display:grid;grid-template-columns:1.1fr .9fr;gap:36px;align-items:center;min-height:64vh}
+@media (max-width:820px){.hero{grid-template-columns:1fr}}
+.scene{perspective:900px;height:290px;display:flex;align-items:center;justify-content:center}
+.ring{position:relative;width:170px;height:100px;transform-style:preserve-3d;animation:spin 20s linear infinite}
+.blk{position:absolute;inset:0;border-radius:14px;padding:12px;color:#fff;font-weight:600;background:linear-gradient(135deg,#0d9488,#6366f1);box-shadow:0 0 28px rgba(99,102,241,.45);transform:rotateY(calc(var(--a)*72deg)) translateZ(190px);display:flex;flex-direction:column;justify-content:space-between}
+.blk small{font:12px ui-monospace,Consolas,monospace;opacity:.85}
+.hello h2{font-size:34px;line-height:1.15;margin:0 0 10px}
+.hello p{margin:0 0 12px;color:var(--mut)}
+.hello .roles span{display:inline-block;margin:0 6px 6px 0;padding:3px 12px;border-radius:99px;border:1px solid var(--line);background:var(--card);font-size:14px}
+.login{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:26px;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 50px rgba(15,31,61,.25);animation:rise .6s backwards}
+.login h3{margin:0;font-size:22px}
+.login label{display:flex;flex-direction:column;gap:4px;font-size:14px;color:var(--mut)}
+.lerr{color:var(--bad);min-height:1.4em;font-size:14px}
+@keyframes spin{to{transform:rotateY(360deg)}}
+@keyframes rise{from{opacity:0;transform:translateY(18px)}}
+@keyframes nudge{50%{transform:translateX(5px)}}
+@keyframes shake{20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.tilt{transform:none!important}}
 </style>
 </head>
 <body>
@@ -197,7 +221,7 @@ async function render() {
   $('#navAdd').style.display = role === 'ADMIN' ? '' : 'none';
   $('#navAudit').style.display = SEE_ALL.includes(role) ? '' : 'none';
   $('#who').textContent = ROLEINFO[role] || '';
-  $('#intro').textContent = INTRO[tab];
+  $('#intro').textContent = INTRO[tab]; $('#intro').style.display = '';
   $('#msg').style.display = 'none';
   $('#pick').style.display = (tab === 'journey' || v) ? 'flex' : 'none';
   $('#tools').style.display = v && !live ? 'flex' : 'none';
@@ -206,7 +230,7 @@ async function render() {
   if (tab === 'alerts') {
     const list = await getAlerts();
     $('#view').innerHTML = list.map(a => { const t = ALERT[a.type] || [a.type, ''];
-      return `<div class="alert ${a.type === 'COLD_CHAIN' || a.type === 'EXPIRED' ? 'warn' : ''}"><b>${esc(t[0])}</b> <span class="mut">(${esc(a.status.toLowerCase())})</span><div>${esc(a.description)}</div><div class="mut">${esc(t[1])}</div></div>`; }).join('') || '<p class="mut">No problems found.</p>';
+      return `<div class="alert tilt ${a.type === 'COLD_CHAIN' || a.type === 'EXPIRED' ? 'warn' : ''}"><b>${esc(t[0])}</b> <span class="mut">(${esc(a.status.toLowerCase())})</span><div>${esc(a.description)}</div><div class="mut">${esc(t[1])}</div></div>`; }).join('') || '<p class="mut">No problems found.</p>';
     return;
   }
   if (tab === 'audit') {
@@ -225,10 +249,10 @@ async function render() {
       : `TAMPERING DETECTED: step ${bad.seq} no longer fits the step before it, so an earlier record was changed`;
     h += `<div class="banner ${bad ? 'bad' : 'ok'}">${msg}</div>`;
   }
-  h += '<div class="chain"><div class="node"><b>Start of history</b><span class="mut">The first record has nothing before it, so it starts from a blank seal.</span><code>blank seal: 64 zeros</code></div>';
-  for (const r of rows) {
+  h += '<div class="chain"><div class="node tilt" style="--i:0"><b>Start of history</b><span class="mut">The first record has nothing before it, so it starts from a blank seal.</span><code>blank seal: 64 zeros</code></div>';
+  for (const [i, r] of rows.entries()) {
     const flag = v && (!r.hashOk || !r.linkOk);
-    h += `<div class="arrow">→</div><div class="node ${flag ? 'badn' : ''}"><b>Step ${r.seq}</b>${party(r.from, r.fromType)}<div class="mut">↓ sent ${n(r.qty)} units</div>${party(r.to, r.toType)}`
+    h += `<div class="arrow" style="--i:${i}">→</div><div class="node tilt ${flag ? 'badn' : ''}" style="--i:${i + 1}"><b>Step ${r.seq}</b>${party(r.from, r.fromType)}<div class="mut">↓ sent ${n(r.qty)} units</div>${party(r.to, r.toType)}`
       + `<code>previous seal: ${esc(r.prev.slice(0, 8))}</code><code>this step’s seal: ${esc(r.hash.slice(0, 8))}</code>`
       + (v ? `<div><span class="chip ${r.hashOk ? 'ok' : 'bad'}">${r.hashOk ? 'Record unchanged' : 'Record was edited'}</span><span class="chip ${r.linkOk ? 'ok' : 'bad'}">${r.linkOk ? 'Linked to previous step' : 'Link broken'}</span></div>` : '') + '</div>';
   }
@@ -304,14 +328,34 @@ function authBox(session) {
   if (!live) { a.innerHTML = `<label class="mut">Preview as <select id="as">${['ADMIN','REGULATOR','AUDITOR','MANUFACTURER','DISTRIBUTOR','PHARMACY'].map(r => `<option>${r}</option>`).join('')}</select></label>`;
     $('#as').onchange = async e => { me = {role: e.target.value, email: 'demo@preview', party: DEMO_PARTY[e.target.value] || null}; tab = 'journey'; lk = null; setTab('journey'); await fillBatches(); await load(); poll(); }; return; }
   if (session) { a.innerHTML = `<span class="badge">${esc(me.email)} · ${esc(me.role)}</span><button id="out">Sign out</button>`; $('#out').onclick = async () => { await sb.auth.signOut(); location.reload(); }; return; }
-  a.innerHTML = '<input id="em" type="email" placeholder="Email" size="18"><input id="pw" type="password" placeholder="Password" size="12"><button class="go" id="in">Sign in</button>';
-  $('#in').onclick = async () => { const {error} = await sb.auth.signInWithPassword({email: $('#em').value, password: $('#pw').value});
-    if (error) return say('Sign-in failed: ' + error.message, false); start(); };
+  a.innerHTML = '';
+}
+function showLogin() {
+  authBox(null);
+  ['#nav', '#pick', '#tools', '#intro'].forEach(s => { $(s).style.display = 'none'; });
+  $('#who').textContent = '';
+  const seals = ['00000000', '940F01E3', '6B876079', 'A31C5D2E', '7E09B4F1'], names = ['Genesis', 'Step 1', 'Step 2', 'Step 3', 'Step 4'];
+  $('#view').innerHTML = `<div class="hero"><div class="left"><div class="scene" aria-hidden="true"><div class="ring">`
+    + names.map((nm, i) => `<div class="blk" style="--a:${i}"><span>${nm}</span><small>seal ${seals[i]}</small></div>`).join('')
+    + `</div></div><div class="hello"><h2>Every medicine has a story.<br>Nobody can rewrite it.</h2>
+      <p>Sign in to follow a medicine from the factory to the patient and check its history.</p>
+      <div class="roles">${['Admin', 'Regulator', 'Auditor', 'Manufacturer', 'Distributor', 'Pharmacy'].map(r => `<span>${r}</span>`).join('')}</div></div></div>
+    <form class="login tilt" id="lf"><h3>Welcome back</h3>
+      <label>Email<input id="em" type="email" autocomplete="username" required></label>
+      <label>Password<input id="pw" type="password" autocomplete="current-password" required></label>
+      <button class="go" id="in">Sign in</button><div class="lerr" id="lerr"></div>
+      <div class="mut">Your role comes from your account, so you only see what you are allowed to see.</div></form></div>`;
+  $('#lf').onsubmit = async e => {
+    e.preventDefault(); const b = $('#in'); b.disabled = true; b.textContent = 'Signing in…';
+    const {error} = await sb.auth.signInWithPassword({email: $('#em').value.trim(), password: $('#pw').value});
+    if (error) { $('#lerr').textContent = error.message; b.disabled = false; b.textContent = 'Sign in'; return; }
+    start();
+  };
 }
 function setTab(t) { tab = t; document.querySelectorAll('#nav button').forEach(x => x.classList.toggle('on', x.dataset.t === t)); }
 async function start() {
   try { const {data} = sb ? await sb.auth.getSession() : {data: {}};
-    if (live && !data.session) { authBox(null); $('#nav').style.display = 'none'; $('#view').innerHTML = '<p class="mut">Please sign in to see the data.</p>'; $('#intro').textContent = 'Sign in with the account your administrator created for you.'; $('#pick').style.display = 'none'; return; }
+    if (live && !data.session) { showLogin(); return; }
     if (live) { const m = await api('/api/me'); me = {email: m.email, role: m.role, party: m.party}; }
     authBox(live ? data.session : null); await fillBatches(); await load(); poll();
   } catch (e) { say(e.message, false); authBox(null); }
@@ -328,6 +372,15 @@ async function init() {
 document.querySelectorAll('#nav button').forEach(btn => btn.onclick = () => { setTab(btn.dataset.t); load(); });
 $('#sel').onchange = e => { cur = +e.target.value; load(); };
 $('#t1').onclick = () => tamper(false); $('#t2').onclick = () => tamper(true); $('#t0').onclick = () => load();
+let hot = null;
+document.addEventListener('pointermove', e => {
+  const c = e.target.closest && e.target.closest('.tilt');
+  if (hot && hot !== c) hot.style.transform = '';
+  hot = c; if (!c) return;
+  const r = c.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
+  c.style.transform = `perspective(700px) rotateX(${(-y * 10).toFixed(1)}deg) rotateY(${(x * 12).toFixed(1)}deg) translateZ(6px)`;
+});
+document.addEventListener('pointerleave', () => { if (hot) { hot.style.transform = ''; hot = null; } });
 init();
 </script>
 </body>
